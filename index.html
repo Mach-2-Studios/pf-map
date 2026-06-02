@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aviation Map Visualization</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --zoom-scale: 1;
@@ -12,7 +13,7 @@
             margin: 0;
             padding: 20px;
             background-color: #f0f2f5;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, sans-serif;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -20,7 +21,7 @@
         }
 
         #map-container {
-            background-color: white;
+            background-color: #e0f2fe; /* Soft ocean blue */
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             border-radius: 8px;
             padding: 10px;
@@ -61,6 +62,7 @@
             cursor: grab;
         }
 
+        /* Map Path Styling */
         .map-path {
             fill: #f9f9f9;
             stroke: #ccc;
@@ -73,15 +75,6 @@
             stroke: #6366f1;
         }
 
-        .label {
-            font-size: calc(4px * var(--zoom-scale));
-            fill: #444;
-            pointer-events: none;
-            user-select: none;
-            transition: fill 0.2s;
-        }
-
-        .waypoint-AIRPORT { fill: #0066cc; }
         .waypoint-WAYPOINT { fill: #333; }
         .waypoint-VOR-DME { fill: #d946ef; }
         .waypoint-NDB { fill: #10b981; }
@@ -91,10 +84,6 @@
             stroke: white;
             stroke-width: calc(0.5px * var(--zoom-scale));
             vector-effect: non-scaling-stroke;
-        }
-        .point:hover + .label {
-            font-weight: bold;
-            fill: #000;
         }
     </style>
 </head>
@@ -317,6 +306,7 @@
     const pathsLayer = document.getElementById('paths-layer');
     const pointsLayer = document.getElementById('waypoints-layer');
 
+    // 1. Draw Map Polygons
     mapPaths.forEach(pathObj => {
         pathObj.polygon.forEach(coords => {
             const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
@@ -325,49 +315,30 @@
             polygon.setAttribute("points", pointsString);
             polygon.setAttribute("class", "map-path");
             
-            const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-            title.textContent = pathObj.name;
-            polygon.appendChild(title);
-            
             pathsLayer.appendChild(polygon);
         });
     });
 
+    // 2. Draw Waypoints
     waypointData.forEach(wp => {
+        if (wp.type === 'AIRPORT') return;
+
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
         
-        let shape;
-        if (wp.type === 'AIRPORT') {
-            shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            shape.setAttribute("x", wp.x - 1);
-            shape.setAttribute("y", wp.y - 1);
-            shape.setAttribute("width", 2);
-            shape.setAttribute("height", 2);
-            shape.style.transform = `scale(var(--zoom-scale))`;
-            shape.style.transformOrigin = `${wp.x}px ${wp.y}px`;
-            shape.style.transformBox = "fill-box";
-        } else {
-            shape = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            shape.setAttribute("cx", wp.x);
-            shape.setAttribute("cy", wp.y);
-            shape.setAttribute("r", wp.type === 'WAYPOINT' ? 0.8 : 1.2);
-            shape.style.transform = `scale(var(--zoom-scale))`;
-            shape.style.transformOrigin = `${wp.x}px ${wp.y}px`;
-        }
+        const shape = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        shape.setAttribute("cx", wp.x);
+        shape.setAttribute("cy", wp.y);
+        shape.setAttribute("r", wp.type === 'WAYPOINT' ? 0.5 : 0.8);
+        shape.style.transform = `scale(var(--zoom-scale))`;
+        shape.style.transformOrigin = `${wp.x}px ${wp.y}px`;
 
         shape.setAttribute("class", `point waypoint-${wp.type}`);
         
-        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        label.setAttribute("x", wp.x + 1);
-        label.setAttribute("y", wp.y + 0.5);
-        label.setAttribute("class", "label");
-        label.textContent = wp.name;
-
         group.appendChild(shape);
-        group.appendChild(label);
         pointsLayer.appendChild(group);
     });
 
+    // 3. Zoom and Pan Implementation
     const svg = document.getElementById('navigation-map');
     let isPanning = false;
     let startPoint = { x: 0, y: 0 };
@@ -381,10 +352,12 @@
 
     const updateViewBox = () => {
         svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+        // Update the CSS variable based on current zoom width vs initial width
         const scale = view.w / initialView.w;
         document.documentElement.style.setProperty('--zoom-scale', scale);
     };
 
+    // Panning logic
     svg.addEventListener('mousedown', (e) => {
         isPanning = true;
         startPoint = { x: e.clientX, y: e.clientY };
@@ -393,7 +366,8 @@
 
     window.addEventListener('mousemove', (e) => {
         if (!isPanning) return;
-
+        
+        // Calculate movement relative to the current zoom level
         const dx = (e.clientX - startPoint.x) * (view.w / svg.clientWidth);
         const dy = (e.clientY - startPoint.y) * (view.h / svg.clientHeight);
         
@@ -408,6 +382,7 @@
         svg.style.cursor = 'grab';
     });
 
+    // Zoom logic
     svg.addEventListener('wheel', (e) => {
         e.preventDefault();
         const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
