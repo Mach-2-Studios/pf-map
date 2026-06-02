@@ -319,7 +319,6 @@
     const pathsLayer = document.getElementById('paths-layer');
     const pointsLayer = document.getElementById('waypoints-layer');
 
-    // 1. Draw Map Polygons
     mapPaths.forEach(pathObj => {
         pathObj.polygon.forEach(coords => {
             const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
@@ -336,14 +335,12 @@
         });
     });
 
-    // 2. Draw Waypoints
     waypointData.forEach(wp => {
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
         
         let shape;
         if (wp.type === 'AIRPORT') {
             shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            // Use class-based sizing for dynamic scaling
             shape.setAttribute("x", wp.x - 1);
             shape.setAttribute("y", wp.y - 1);
             shape.setAttribute("width", 2);
@@ -373,7 +370,6 @@
         pointsLayer.appendChild(group);
     });
 
-    // 3. Zoom and Pan Implementation
     const svg = document.getElementById('navigation-map');
     let isPanning = false;
     let startPoint = { x: 0, y: 0 };
@@ -387,12 +383,10 @@
 
     const updateViewBox = () => {
         svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
-        // Update the CSS variable based on current zoom width vs initial width
         const scale = view.w / initialView.w;
         document.documentElement.style.setProperty('--zoom-scale', scale);
     };
 
-    // Panning logic
     svg.addEventListener('mousedown', (e) => {
         isPanning = true;
         startPoint = { x: e.clientX, y: e.clientY };
@@ -401,8 +395,7 @@
 
     window.addEventListener('mousemove', (e) => {
         if (!isPanning) return;
-        
-        // Calculate movement relative to the current zoom level
+
         const dx = (e.clientX - startPoint.x) * (view.w / svg.clientWidth);
         const dy = (e.clientY - startPoint.y) * (view.h / svg.clientHeight);
         
@@ -417,7 +410,6 @@
         svg.style.cursor = 'grab';
     });
 
-    // Zoom logic
     svg.addEventListener('wheel', (e) => {
         e.preventDefault();
         const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
